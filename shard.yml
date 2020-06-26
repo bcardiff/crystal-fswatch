@@ -1,0 +1,16 @@
+name: fswatch
+version: 0.1.0
+
+authors:
+  - Brian J. Cardiff <bcardiff@gmail.com>
+
+crystal: 0.35.1
+
+license: MIT
+
+libraries:
+  libfswatch: ~> 1.14
+
+development_dependencies:
+  crystal_lib:
+    github: crystal-lang/crystal_lib
