@@ -8,6 +8,28 @@ module FSWatch
 
   record Event, path : String
 
+  enum MonitorType
+    SystemDefault
+    Fsevents
+    Kqueue
+    Inotify
+    Windows
+    Poll
+    Fen
+
+    def to_unsafe
+      case self
+      in SystemDefault then LibFSWatch::MonitorType::SystemDefaultMonitorType
+      in Fsevents      then LibFSWatch::MonitorType::FseventsMonitorType
+      in Kqueue        then LibFSWatch::MonitorType::KqueueMonitorType
+      in Inotify       then LibFSWatch::MonitorType::InotifyMonitorType
+      in Windows       then LibFSWatch::MonitorType::WindowsMonitorType
+      in Poll          then LibFSWatch::MonitorType::PollMonitorType
+      in Fen           then LibFSWatch::MonitorType::FenMonitorType
+      end
+    end
+  end
+
   def self.init
     check LibFSWatch.init_library, "Unable to init fswatch"
   end
@@ -20,7 +42,7 @@ module FSWatch
     @changes : Channel(Event)
     @on_change : Event ->
 
-    def initialize(monitor_type = LibFSWatch::MonitorType::SystemDefaultMonitorType)
+    def initialize(monitor_type : MonitorType = MonitorType::SystemDefault)
       @handle = LibFSWatch.init_session(monitor_type)
       @on_change = ->(e : Event) {}
       @changes = Channel(Event).new
