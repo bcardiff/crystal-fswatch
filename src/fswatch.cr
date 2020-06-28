@@ -17,8 +17,14 @@ module FSWatch
   end
 
   class Session
+    @changes : Channel(Event)
+    @on_change : Event ->
+
     def initialize(monitor_type = LibFSWatch::MonitorType::SystemDefaultMonitorType)
       @handle = LibFSWatch.init_session(monitor_type)
+      @on_change = ->(e : Event) {}
+      @changes = Channel(Event).new
+      setup_handle_callback
     end
 
     def to_unsafe
@@ -29,28 +35,36 @@ module FSWatch
       LibFSWatch.destroy_session(@handle)
     end
 
+    # :nodoc:
+    protected def setup_handle_callback
+      status = LibFSWatch.set_callback(@handle, ->(events, event_num, data) {
+        changes = Box(Channel(Event)).unbox(data)
+        changes.send(Event.new(
+          path: String.new(events.value.path)
+        ))
+      }, Box.box(@changes))
+
+      check status, "Unable to set_callback"
+
+      spawn do
+        loop do
+          @on_change.call(@changes.receive)
+        end
+      end
+    end
+
     def add_path(path : String | Path)
       check LibFSWatch.add_path(@handle, path.to_s), "Unable to add_path"
     end
 
-    @@do_not_collect : Pointer(Void)?
-
-    def set_callback(&callback : Event ->)
-      boxed_data = Box.box(callback)
-      @@do_not_collect = boxed_data
-
-      status = LibFSWatch.set_callback(@handle, ->(events, event_num, data) {
-        data_as_callback = Box(typeof(callback)).unbox(data)
-        data_as_callback.call(Event.new(
-          path: String.new(events.value.path)
-        ))
-      }, boxed_data)
-
-      check status, "Unable to set_callback"
+    def on_change(&on_change : Event ->)
+      @on_change = on_change
     end
 
     def start_monitor
-      check LibFSWatch.start_monitor(@handle), "Unable to start_monitor"
+      Thread.new do
+        check LibFSWatch.start_monitor(@handle), "Unable to start_monitor"
+      end
     end
 
     def stop_monitor

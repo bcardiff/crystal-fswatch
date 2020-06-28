@@ -2,14 +2,12 @@ require "../src/fswatch"
 
 session = FSWatch::Session.new
 session.add_path __DIR__
-session.set_callback do |event|
+session.on_change do |event|
   pp! event
 end
 
-spawn do
-  puts "Starting monitor"
-  session.start_monitor
-end
+puts "Starting monitor"
+session.start_monitor
 
 sleep 10
 
