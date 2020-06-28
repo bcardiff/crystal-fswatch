@@ -101,6 +101,13 @@ module FSWatch
       raise Error.new(message) unless status == LibFSWatch::OK
     end
   end
+
+  def self.watch(path : String | Path, &block : Event ->)
+    session = FSWatch::Session.new
+    session.on_change(&block)
+    session.add_path path
+    session.start_monitor
+  end
 end
 
 FSWatch.init
