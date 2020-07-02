@@ -64,32 +64,61 @@ module FSWatch
     raise Error.new(message) unless status == LibFSWatch::OK
   end
 
-  class Session
-    @on_change : Event ->
-
+  # :nodoc:
+  struct ThreadPortal(T)
     {% if flag?(:preview_mt) %}
-      @changes : Channel(Event)
+      @channel : Channel(T)
 
-      def initialize(monitor_type : MonitorType = MonitorType::SystemDefault)
-        @handle = LibFSWatch.init_session(monitor_type)
-        @on_change = ->(e : Event) {}
-        @changes = Channel(Event).new
-        setup_handle_callback
+      def initialize
+        @channel = Channel(T).new
       end
     {% else %}
       @producer_reader : IO
       @producer_writer : IO
       @consumer_reader : IO
       @consumer_writer : IO
+      @next_value : T
 
-      def initialize(monitor_type : MonitorType = MonitorType::SystemDefault)
-        @handle = LibFSWatch.init_session(monitor_type)
-        @on_change = ->(e : Event) {}
+      def initialize
         @producer_reader, @producer_writer = IO.pipe(read_blocking: false, write_blocking: true)
         @consumer_reader, @consumer_writer = IO.pipe(read_blocking: false, write_blocking: true)
-        setup_handle_callback
+        @next_value = uninitialized T
       end
     {% end %}
+
+    def send(value : T)
+      {% if flag?(:preview_mt) %}
+        @channel.send value
+      {% else %}
+        @next_value = value
+        @producer_writer.write_bytes(1i32)
+        @consumer_reader.read_bytes(Int32)
+      {% end %}
+    end
+
+    def receive : T
+      {% if flag?(:preview_mt) %}
+        @channel.receive
+      {% else %}
+        @producer_reader.read_bytes(Int32)
+        value = @next_value
+        @consumer_writer.write_bytes(1i32)
+        value
+      {% end %}
+    end
+  end
+
+  class Session
+    @on_change : Event ->
+
+    @portal : ThreadPortal(Event)
+
+    def initialize(monitor_type : MonitorType = MonitorType::SystemDefault)
+      @handle = LibFSWatch.init_session(monitor_type)
+      @on_change = ->(e : Event) {}
+      @portal = ThreadPortal(Event).new
+      setup_handle_callback
+    end
 
     def to_unsafe
       @handle
@@ -99,23 +128,10 @@ module FSWatch
       LibFSWatch.destroy_session(@handle)
     end
 
-    {% if flag?(:preview_mt) %}
-      # :nodoc:
-      protected def changes
-        @changes
-      end
-    {% else %}
-      # :nodoc:
-      protected getter producer_reader : IO
-      # :nodoc:
-      protected getter producer_writer : IO
-      # :nodoc:
-      protected getter consumer_reader : IO
-      # :nodoc:
-      protected getter consumer_writer : IO
-      # :nodoc:
-      protected property next_event : Event?
-    {% end %}
+    # :nodoc:
+    protected def portal
+      @portal
+    end
 
     # :nodoc:
     protected def setup_handle_callback
@@ -124,30 +140,14 @@ module FSWatch
         event = Event.new(
           path: String.new(events.value.path)
         )
-        {% if flag?(:preview_mt) %}
-          session.changes.send event
-        {% else %}
-          session.next_event = event
-          session.producer_writer.write_bytes(1i32)
-          session.consumer_reader.read_bytes(Int32)
-          session.next_event = nil
-        {% end %}
+        session.portal.send event
       }, Box.box(self))
 
       check status, "Unable to set_callback"
 
       spawn do
         loop do
-          event = nil
-          {% if flag?(:preview_mt) %}
-            event = @changes.receive
-          {% else %}
-            self.producer_reader.read_bytes(Int32)
-            event = self.next_event
-            self.consumer_writer.write_bytes(1i32)
-          {% end %}
-
-          @on_change.call(event) if event
+          @on_change.call(@portal.receive)
         end
       end
     end
