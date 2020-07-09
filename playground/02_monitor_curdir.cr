@@ -1,7 +1,11 @@
 require "../src/fswatch"
 
+# pp! FSWatch.verbose
+# FSWatch.verbose = true
+# pp! FSWatch.verbose
+
 i = 5
-FSWatch.watch __DIR__ do |event|
+FSWatch.watch __DIR__, latency: 3.0, recursive: false do |event|
   i -= 1
   pp! event
 end
