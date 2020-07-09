@@ -1,6 +1,6 @@
-# fswatch
+# crystal-fswatch
 
-TODO: Write a description here
+[fswatch](https://emcrisostomo.github.io/fswatch/) bindings for [Crystal](https://crystal-lang.org/)
 
 ## Installation
 
@@ -18,13 +18,20 @@ TODO: Write a description here
 
 ```crystal
 require "fswatch"
+
+FSWatch.watch "." do |event|
+  pp! event
+end
+
+sleep 10 # keep main fiber busy to prevent exiting
 ```
 
-TODO: Write usage instructions here
+If libfswatch is not found you can try using the provided `libfswatch.pc` file:
 
-## Development
-
-TODO: Write development instructions here
+```
+# Homebrew
+$ export PKG_CONFIG_PATH="./pkg_config/brew:$PKG_CONFIG_PATH"
+```
 
 ## Contributing
 

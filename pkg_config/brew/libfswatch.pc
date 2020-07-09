@@ -1,0 +1,12 @@
+prefix=/usr/local/Cellar/fswatch/1.14.0
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libfswatch
+Description: libfswatch
+URL: https://github.com/emcrisostomo/fswatch/tree/master/libfswatch
+Version: 1.14.0
+Requires:
+Libs: -L${libdir} -lfswatch
+Cflags: -I${includedir}
