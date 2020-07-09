@@ -6,7 +6,7 @@ module FSWatch
   class Error < ::Exception
   end
 
-  record Event, path : String
+  record Event, path : String, event_flag : LibFSWatch::EventFlag
 
   enum MonitorType
     SystemDefault
@@ -138,7 +138,8 @@ module FSWatch
       status = LibFSWatch.set_callback(@handle, ->(events, event_num, data) {
         session = Box(Session).unbox(data)
         event = Event.new(
-          path: String.new(events.value.path)
+          path: String.new(events.value.path),
+          event_flag: events.value.flags.value
         )
         session.portal.send event
       }, Box.box(self))
