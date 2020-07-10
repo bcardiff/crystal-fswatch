@@ -4,6 +4,7 @@ lib LibFSWatch
   INVALID_HANDLE = -1
   OK             =  0
   alias Session = Void
+  @[Flags]
   enum EventFlag
     NoOp              =    0
     PlatformSpecific  =    1
