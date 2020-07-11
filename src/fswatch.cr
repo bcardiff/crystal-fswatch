@@ -46,21 +46,12 @@ module FSWatch
                  event_type_filters : Array(EventTypeFilter)? = nil,
                  filters : Array(MonitorFilter)? = nil,
                  &block : Event ->)
-    session = FSWatch::Session.new
-    session.latency = latency unless latency.nil?
-    session.recursive = recursive unless recursive.nil?
-    session.directory_only = directory_only unless directory_only.nil?
-    session.follow_symlinks = follow_symlinks unless follow_symlinks.nil?
-    session.allow_overflow = allow_overflow unless allow_overflow.nil?
-    if properties
-      properties.each { |k, v| session.add_property(k, v) }
-    end
-    if event_type_filters
-      event_type_filters.each { |etv| session.add_event_type_filter(etv) }
-    end
-    if filters
-      filters.each { |f| session.filters(etv) }
-    end
+    session = FSWatch::Session.build(
+      latency: latency, recursive: recursive, directory_only: directory_only,
+      follow_symlinks: follow_symlinks, allow_overflow: allow_overflow,
+      properties: properties, event_type_filters: event_type_filters, filters: filters
+    )
+
     session.on_change(&block)
     session.add_path path
     session.start_monitor
