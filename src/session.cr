@@ -4,10 +4,13 @@ module FSWatch
 
     @portal : ThreadPortal(Event)
 
+    @_running : Bool
+
     def initialize(monitor_type : MonitorType = MonitorType::SystemDefault)
       @handle = LibFSWatch.init_session(monitor_type)
       @on_change = ->(e : Event) {}
       @portal = ThreadPortal(Event).new
+      @_running = false
       setup_handle_callback
     end
 
@@ -25,6 +28,11 @@ module FSWatch
     end
 
     # :nodoc:
+    protected def _running : Bool
+      @_running
+    end
+
+    # :nodoc:
     protected def setup_handle_callback
       status = LibFSWatch.set_callback(@handle, ->(events, event_num, data) {
         session = Box(Session).unbox(data)
@@ -32,7 +40,10 @@ module FSWatch
           path: String.new(events.value.path),
           event_flag: events.value.flags.value
         )
-        session.portal.send event
+        if session._running
+          # fswatch is calling the callback even after the stop_monitoring is called
+          session.portal.send event
+        end
       }, Box.box(self))
 
       check status, "Unable to set_callback"
@@ -56,10 +67,12 @@ module FSWatch
       Thread.new do
         check LibFSWatch.start_monitor(@handle), "Unable to start_monitor"
       end
+      @_running = true
     end
 
     def stop_monitor
       check LibFSWatch.stop_monitor(@handle), "Unable to stop_monitor"
+      @_running = false
     end
 
     def is_running
