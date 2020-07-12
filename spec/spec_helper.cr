@@ -1,2 +1,5 @@
 require "spec"
+require "log"
 require "../src/fswatch"
+require "./support/tempfile"
+require "./support/timeout"
