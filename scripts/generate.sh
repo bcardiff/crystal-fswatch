@@ -9,6 +9,7 @@ OUTPUT=$SCRIPT_ROOT/../src/lib_fswatch.cr
 crystal run $CRYSTAL_LIB -- "$SCRIPT_ROOT/lib_fswatch.cr" |
   sed -e '/lib LibFSWatch/a\'$'\n''\ \ alias Bool = LibC::Int' |
   sed 's/LibC::Bool/Bool/g' |
+  sed -e '/^.*enum EventFlag.*/i\'$'\n''\ \ @[Flags]' |
   sed '/$ALL_EVENT_FLAGS/ s/^/#/' > $OUTPUT
 
 crystal tool format $OUTPUT
