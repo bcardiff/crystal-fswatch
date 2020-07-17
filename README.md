@@ -26,13 +26,6 @@ end
 sleep 10 # keep main fiber busy to prevent exiting
 ```
 
-If libfswatch is not found you can try using the provided `libfswatch.pc` file:
-
-```
-# Homebrew
-$ export PKG_CONFIG_PATH="./pkg_config/brew:$PKG_CONFIG_PATH"
-```
-
 ## Contributing
 
 1. Fork it (<https://github.com/bcardiff/crystal-fswatch/fork>)
