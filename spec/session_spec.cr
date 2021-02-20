@@ -4,9 +4,9 @@ private def wait
   sleep 0.5 # wait so the creation of files does not trigger an event
 end
 
-private def _it(description = "assert", options = NamedTuple.new, file = __FILE__, line = __LINE__, end_line = __END_LINE__,
+private def _it(description = "assert", options = NamedTuple.new, file = __FILE__, line = __LINE__, end_line = __END_LINE__, focus = false,
                 &block : FSWatch::Session, Channel(FSWatch::Event), String ->)
-  it(description, file, line, end_line) do
+  it(description, file, line, end_line, focus: focus) do
     Log.debug { "Starting #{file}:#{line}" }
     with_tempdir do |path|
       wait
@@ -89,6 +89,24 @@ describe FSWatch::Session do
       e.path.should eq(path)
       e.is_dir?.should be_truthy
     }
+  end
+
+  _it "reacts to many updated files" do |session, events, path|
+    10.times do |i|
+      File.write(File.join(path, "file_to_update_#{i}.txt"), "foo")
+    end
+    wait
+    session.start_monitor
+
+    10.times do |i|
+      File.write(File.join(path, "file_to_update_#{i}.txt"), "bar", mode: "a")
+    end
+    10.times do |i|
+      e = with_timeout { events.receive }
+      File.match?(File.join(path, "file_to_update_*.txt"), e.path).should eq(true)
+      on_darwin { e.created?.should be_truthy }
+      on_linux { e.platform_specific?.should be_truthy }
+    end
   end
 
   context "when recursive" do

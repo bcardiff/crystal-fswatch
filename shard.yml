@@ -4,12 +4,12 @@ version: 0.1.0
 authors:
   - Brian J. Cardiff <bcardiff@gmail.com>
 
-crystal: 0.35.1
+crystal: 0.36.1
 
 license: MIT
 
 libraries:
-  libfswatch: ~> 1.14
+  libfswatch: ~> 1.15
 
 development_dependencies:
   crystal_lib:
