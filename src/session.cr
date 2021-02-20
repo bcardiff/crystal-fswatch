@@ -2,14 +2,14 @@ module FSWatch
   class Session
     @on_change : Event ->
 
-    @portal : ThreadPortal(Event)
+    @portal : ThreadPortal(Slice(Event))
 
     @_running : Bool
 
     def initialize(monitor_type : MonitorType = MonitorType::SystemDefault)
       @handle = LibFSWatch.init_session(monitor_type)
       @on_change = ->(e : Event) {}
-      @portal = ThreadPortal(Event).new
+      @portal = ThreadPortal(Slice(Event)).new
       @_running = false
       setup_handle_callback
     end
@@ -36,13 +36,14 @@ module FSWatch
     protected def setup_handle_callback
       status = LibFSWatch.set_callback(@handle, ->(events, event_num, data) {
         session = Box(Session).unbox(data)
-        event = Event.new(
-          path: String.new(events.value.path),
-          event_flag: events.value.flags.value
-        )
         if session._running
           # fswatch is calling the callback even after the stop_monitoring is called
-          session.portal.send event
+          session.portal.send events.to_slice(event_num).map { |ev|
+            Event.new(
+              path: String.new(ev.path),
+              event_flag: ev.flags.value
+            )
+          }
         end
       }, Box.box(self))
 
@@ -50,7 +51,9 @@ module FSWatch
 
       spawn do
         loop do
-          @on_change.call(@portal.receive)
+          @portal.receive.each do |ev|
+            @on_change.call(ev)
+          end
         end
       end
     end
