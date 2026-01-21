@@ -8,7 +8,7 @@ module FSWatch
 
     def initialize(monitor_type : MonitorType = MonitorType::SystemDefault)
       @handle = LibFSWatch.init_session(monitor_type)
-      @on_change = ->(e : Event) {}
+      @on_change = ->(e : Event) { }
       @portal = ThreadPortal(Slice(Event)).new
       @_running = false
       setup_handle_callback

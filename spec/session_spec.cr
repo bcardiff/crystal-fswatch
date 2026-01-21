@@ -1,7 +1,7 @@
 require "./spec_helper"
 
 private def wait
-  sleep 0.5 # wait so the creation of files does not trigger an event
+  sleep 0.5.seconds # wait so the creation of files does not trigger an event
 end
 
 private def _it(description = "assert", options = NamedTuple.new, file = __FILE__, line = __LINE__, end_line = __END_LINE__, focus = false,
@@ -25,13 +25,13 @@ private def _it(description = "assert", options = NamedTuple.new, file = __FILE_
   end
 end
 
-def on_darwin
+def on_darwin(&)
   {% if flag?(:darwin) %}
     yield
   {% end %}
 end
 
-def on_linux
+def on_linux(&)
   {% if flag?(:linux) %}
     yield
   {% end %}

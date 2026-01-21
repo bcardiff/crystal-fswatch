@@ -1,9 +1,9 @@
 require "file_utils"
 
-def with_tempdir
+def with_tempdir(&)
   tempdir = File.join(Dir.tempdir, "spec-#{Random.new.hex(4)}")
   FileUtils.mkdir_p(tempdir)
-  tempdir = File.real_path(tempdir)
+  tempdir = File.realpath(tempdir)
 
   begin
     yield tempdir
