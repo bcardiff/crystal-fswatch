@@ -44,7 +44,7 @@ jobs:
           cd fswatch/
           ./configure
           make -j"$(getconf _NPROCESSORS_ONLN)"
-          make install
+          sudo make install
 
       -
         name: Check libfswatch installation
