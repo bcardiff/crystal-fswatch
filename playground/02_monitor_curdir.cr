@@ -12,6 +12,6 @@ end
 
 while i > 0
   puts "Waiting for #{i} events"
-  sleep 0.1
+  sleep 0.1.seconds
   Fiber.yield
 end

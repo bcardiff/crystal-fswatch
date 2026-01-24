@@ -5,4 +5,4 @@ FSWatch.watch "./playground", recursive: true do |event|
 end
 
 puts "sleeping..."
-sleep 10
+sleep 10.seconds

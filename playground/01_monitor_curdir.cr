@@ -1,15 +1,11 @@
 require "../src/fswatch"
 
-session = FSWatch::Session.new
-session.add_path __DIR__
-session.on_change do |event|
-  pp! event
+FSWatch.watch __DIR__ do |event|
+  puts "got event for #{event.inspect}"
 end
 
-puts "Starting monitor"
-session.start_monitor
+puts "watching (non recursively) #{__DIR__} for 10 seconds..."
 
-sleep 10
+sleep 10.seconds
 
-puts "Stopping monitor"
-session.stop_monitor
+puts "end"
