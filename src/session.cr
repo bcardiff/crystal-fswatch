@@ -67,9 +67,15 @@ module FSWatch
     end
 
     def start_monitor
-      Thread.new do
-        check LibFSWatch.start_monitor(@handle), "Unable to start_monitor"
-      end
+      {% if flag?(:preview_mt) && flag?(:execution_context) %}
+        Fiber::ExecutionContext::Isolated.new("crystal-fswatch.monitor") do
+          check LibFSWatch.start_monitor(@handle), "Unable to start_monitor"
+        end
+      {% else %}
+        Thread.new do
+          check LibFSWatch.start_monitor(@handle), "Unable to start_monitor"
+        end
+      {% end %}
       @_running = true
     end
 
