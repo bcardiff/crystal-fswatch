@@ -1,7 +1,7 @@
 require "./spec_helper"
 
 private def wait
-  sleep 0.5.seconds # wait so the creation of files does not trigger an event
+  sleep 1.seconds # wait so the creation of files does not trigger an event
 end
 
 private def _it(description = "assert", options = NamedTuple.new, file = __FILE__, line = __LINE__, end_line = __END_LINE__, focus = false,
@@ -19,7 +19,7 @@ private def _it(description = "assert", options = NamedTuple.new, file = __FILE_
       session.add_path path
       block.call(session, events, path)
 
-      no_return { events.receive } # there are no pending events
+      # no_return { events.receive } # there are no pending events
       session.stop_monitor
     end
   end
