@@ -45,6 +45,9 @@ jobs:
           ./configure --prefix=$(pwd)/target
           make -j"$(getconf _NPROCESSORS_ONLN)"
           make install
+
+          sudo ldconfig
+
       - run: shards install
       - 
         name: Run tests
