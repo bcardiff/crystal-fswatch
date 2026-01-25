@@ -72,7 +72,7 @@ module FSWatch
           check LibFSWatch.start_monitor(@handle), "Unable to start_monitor"
         end
       {% else %}
-        Thread.new do
+        Thread.new "crystal-fswatch.monitor" do
           check LibFSWatch.start_monitor(@handle), "Unable to start_monitor"
         end
       {% end %}
