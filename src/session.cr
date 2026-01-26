@@ -4,6 +4,20 @@ lib LibGC
   fun register_my_thread = GC_register_my_thread(sb : StackBase*) : Int
 end
 
+class Thread
+  # :doc:
+  def self.ensure_registered
+    register if LibGC.thread_is_registered == 0
+  end
+
+  # :doc:
+  def self.register
+    current_pthread = LibC.pthread_self
+    address = LibC.pthread_get_stackaddr_np(current_pthread)
+    LibGC.register_my_thread(address.as(LibGC::StackBase*))
+  end
+end
+
 module FSWatch
   class Session
     @on_change : Event ->
@@ -43,12 +57,7 @@ module FSWatch
       LibGC.allow_register_threads
 
       status = LibFSWatch.set_callback(@handle, ->(events, event_num, data) {
-        is_registered = LibGC.thread_is_registered
-        if LibGC.thread_is_registered == 0
-          current_pthread = LibC.pthread_self
-          address = LibC.pthread_get_stackaddr_np(current_pthread) # - LibC.pthread_get_stacksize_np(current_pthread)
-          reg = LibGC.register_my_thread(address.as(LibGC::StackBase*))
-        end
+        Thread.ensure_registered
         session = Box(Session).unbox(data)
         if session._running
           # fswatch is calling the callback even after the stop_monitoring is called
