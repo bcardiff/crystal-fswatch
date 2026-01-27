@@ -19,6 +19,43 @@ class Thread
 end
 
 module FSWatch
+  # Based on https://stackoverflow.com/a/8941979/30948
+  class MVar(T)
+    @put_cond : Thread::ConditionVariable
+    @take_cond : Thread::ConditionVariable
+    @lock : Thread::Mutex
+    @value : T?
+
+    def initialize
+      @put_cond = Thread::ConditionVariable.new
+      @take_cond = Thread::ConditionVariable.new
+      @lock = Thread::Mutex.new
+      @value = nil
+    end
+
+    def put(value : T)
+      @lock.synchronize do
+        while !@value.nil?
+          @put_cond.wait(@lock) # if MVar is full, wait until another thread takes the value - release the mutex,  and wait on put_cond to become true
+        end
+        @value = value    # if here, we got the signal from another thread that took MVar - MVar is empty now. OK to fill
+        @take_cond.signal # signal other threads that value is available for taking now
+      end
+    end
+
+    def take : T
+      @lock.synchronize do
+        while @value.nil?
+          @take_cond.wait(@lock) # if MVar is empty, wait until another thread puts a value - release the mutex, and wait on take_cond to become true
+        end
+        val = @value.not_nil! # if here, we got the signal from another thread that put a value - MVar is full now. OK to take
+        @value = nil          # empty the MVar
+        @put_cond.signal      # signal other threads that MVar is empty now, so they can put a value
+        return val
+      end
+    end
+  end
+
   class Session
     @on_change : Event ->
 
@@ -31,6 +68,8 @@ module FSWatch
       @on_change = ->(e : Event) { }
       @portal = ThreadPortal(Slice(Event)).new
       @_running = false
+      @event_data = MVar({Pointer(LibFSWatch::Cevent), LibC::UInt}).new
+      @event_processed = MVar(Bool).new
       setup_handle_callback
     end
 
@@ -54,19 +93,30 @@ module FSWatch
 
     # :nodoc:
     protected def setup_handle_callback
-      LibGC.allow_register_threads
+      # LibGC.allow_register_threads
 
-      status = LibFSWatch.set_callback(@handle, ->(events, event_num, data) {
-        Thread.ensure_registered
-        session = Box(Session).unbox(data)
-        if session._running
+      Thread.new do
+        while (e = @event_data.take)
+          events, event_num = e
+
           # fswatch is calling the callback even after the stop_monitoring is called
-          session.portal.send events.to_slice(event_num).map { |ev|
+          @portal.send events.to_slice(event_num).map { |ev|
             Event.new(
               path: String.new(ev.path),
               event_flag: ev.flags.value
             )
           }
+
+          @event_processed.put(true)
+        end
+      end
+
+      status = LibFSWatch.set_callback(@handle, ->(events, event_num, data) {
+        # Thread.ensure_registered
+        session = Box(Session).unbox(data)
+        if session._running
+          session.@event_data.put({events, event_num})
+          session.@event_processed.take # wait until the events are processed
         end
       }, Box.box(self))
 
