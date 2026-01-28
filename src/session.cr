@@ -2,14 +2,30 @@ module FSWatch
   class Session
     @on_change : Event ->
 
-    @portal : ThreadPortal(Slice(Event))
+    @portal : ThreadPortal(Slice(Event)) | Channel(Slice(Event))
 
     @_running : Bool
 
     def initialize(monitor_type : MonitorType = MonitorType::SystemDefault)
       @handle = LibFSWatch.init_session(monitor_type)
       @on_change = ->(e : Event) { }
-      @portal = ThreadPortal(Slice(Event)).new
+
+      # ThreadPortal vs Channel selection
+      #
+      # On linux fswatch will use an ad-hoc thread created in #start_monitor
+      # This thread can't use channels to communicate with other threads if we
+      # are on single-thread.
+      #
+      # On darwin (10.6+) fswatch will use GCD threads to call the callback.
+      # GCD threads are managed by the OS and unkown to Crystal, so they can't use
+      # channels even in multi-thread mode.
+      #
+      needs_io_based_portal = {% if flag?(:preview_mt) && !flag?(:darwin) %}
+                                false
+                              {% else %}
+                                true
+                              {% end %}
+      @portal = needs_io_based_portal ? ThreadPortal(Slice(Event)).new : Channel(Slice(Event)).new
       @_running = false
       setup_handle_callback
     end
