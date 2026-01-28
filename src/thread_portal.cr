@@ -1,7 +1,7 @@
 module FSWatch
   # :nodoc:
   struct ThreadPortal(T)
-    {% if flag?(:preview_mt) %}
+    {% if flag?(:preview_mt) && !flag?(:darwin) %}
       @channel : Channel(T)
 
       def initialize
@@ -22,7 +22,7 @@ module FSWatch
     {% end %}
 
     def send(value : T)
-      {% if flag?(:preview_mt) %}
+      {% if flag?(:preview_mt) && !flag?(:darwin) %}
         @channel.send value
       {% else %}
         @next_value = value
@@ -33,7 +33,7 @@ module FSWatch
     end
 
     def receive : T
-      {% if flag?(:preview_mt) %}
+      {% if flag?(:preview_mt) && !flag?(:darwin) %}
         @channel.receive
       {% else %}
         @producer_reader.read_bytes(Int32)
