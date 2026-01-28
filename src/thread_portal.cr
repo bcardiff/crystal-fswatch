@@ -8,15 +8,15 @@ module FSWatch
         @channel = Channel(T).new
       end
     {% else %}
-      @producer_reader : IO
-      @producer_writer : IO
-      @consumer_reader : IO
-      @consumer_writer : IO
+      @producer_reader : IO::FileDescriptor
+      @producer_writer : IO::FileDescriptor
+      @consumer_reader : IO::FileDescriptor
+      @consumer_writer : IO::FileDescriptor
       @next_value : T
 
       def initialize
         @producer_reader, @producer_writer = IO.pipe(read_blocking: false, write_blocking: true)
-        @consumer_reader, @consumer_writer = IO.pipe(read_blocking: false, write_blocking: true)
+        @consumer_reader, @consumer_writer = IO.pipe(read_blocking: true, write_blocking: false)
         @next_value = uninitialized T
       end
     {% end %}
@@ -26,8 +26,9 @@ module FSWatch
         @channel.send value
       {% else %}
         @next_value = value
-        @producer_writer.write_bytes(1i32)
-        @consumer_reader.read_bytes(Int32)
+        value = 1i32
+        LibC.write(@producer_writer.fd, pointerof(value), sizeof(Int32))
+        LibC.read(@consumer_reader.fd, pointerof(value), sizeof(Int32))
       {% end %}
     end
 
