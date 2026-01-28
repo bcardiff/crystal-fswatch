@@ -10,7 +10,12 @@ permissions:
   
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
     steps:
       - 
         name: Download source
@@ -46,10 +51,21 @@ jobs:
           make -j"$(getconf _NPROCESSORS_ONLN)"
           sudo make install
 
+      - 
+        name: Refresh shared library (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo ldconfig
+
+      - 
+        name: Refresh shared library (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          sudo update_dyld_shared_cache
+
       -
         name: Check libfswatch installation
         run: |
-          sudo ldconfig
           pkg-config --list-all
           pkg-config --cflags --libs libfswatch
 
