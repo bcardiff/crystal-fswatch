@@ -73,17 +73,28 @@ jobs:
 
       - 
         name: Run tests (single-thread)
+        id: specSingleThread
         run: crystal spec
+        continue-on-error: true
 
       - 
         name: Run tests (multi-thread)
+        id: specMultiThread
         run: crystal spec -Dpreview_mt
+        continue-on-error: true
 
       - 
         name: Run tests (execution-context)
+        id: specExecutionContext
         run: crystal spec -Dpreview_mt -Dexecution_context
+        continue-on-error: true
 
       - 
         name: Lint
         run: crystal tool format && git diff --exit-code
         if: matrix.crystal == 'latest'
+
+      - 
+        name: CheckIfAnySpecFailed
+        if: steps.specSingleThread.outcome == 'failure' || steps.specMultiThread.outcome == 'failure' || steps.specExecutionContext.outcome == 'failure'
+        run: exit 1
