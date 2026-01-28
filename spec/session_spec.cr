@@ -19,7 +19,6 @@ private def _it(description = "assert", options = NamedTuple.new, file = __FILE_
       session.add_path path
       block.call(session, events, path)
 
-      # no_return { events.receive } # there are no pending events
       session.stop_monitor
     end
   end
@@ -62,16 +61,16 @@ describe FSWatch::Session do
   end
 
   _it "reacts to new deleted files" do |session, events, path|
-    File.write(File.join(path, "file_to_update.txt"), "foo")
+    File.write(File.join(path, "file_to_delete.txt"), "foo")
     wait
     session.start_monitor
+    wait
 
-    File.delete(File.join(path, "file_to_update.txt"))
+    File.delete(File.join(path, "file_to_delete.txt"))
     e = with_timeout { events.receive }
 
-    e.path.should eq(File.join(path, "file_to_update.txt"))
+    e.path.should eq(File.join(path, "file_to_delete.txt"))
 
-    on_darwin { e.created?.should be_truthy } # WARNING: different behaviour
     on_linux { e.removed?.should be_truthy }
   end
 
@@ -162,7 +161,7 @@ describe FSWatch::Session do
         e.created?.should be_truthy
       }
 
-      # no assertions: use the implicit no more pending events
+      no_return { events.receive } # there are no pending events
     end
 
     _it "does not react to new nested directories", options: {recursive: false} do |session, events, path|
@@ -179,7 +178,7 @@ describe FSWatch::Session do
         e.created?.should be_truthy
       }
 
-      # no assertions: use the implicit no more pending events
+      no_return { events.receive } # there are no pending events
     end
   end
 end
