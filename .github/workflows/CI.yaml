@@ -70,9 +70,19 @@ jobs:
           pkg-config --cflags --libs libfswatch
 
       - run: shards install
+
       - 
-        name: Run tests
+        name: Run tests (single-thread)
         run: crystal spec
+
+      - 
+        name: Run tests (multi-thread)
+        run: crystal spec -Dpreview_mt
+
+      - 
+        name: Run tests (execution-context)
+        run: crystal spec -Dpreview_mt -Dexecution_context
+
       - 
         name: Lint
         run: crystal tool format && git diff --exit-code
